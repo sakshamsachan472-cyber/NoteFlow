@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+      
+  <!-- ============ SEO ============ -->
+  <title>NoteFlow — Offline-First Notes App That Works Without Internet</title>
+  <meta name="description" content="Write and organize notes offline with NoteFlow. Save notes and attachments on your device, categorize them, and sync changes when you reconnect." />
+  <meta name="keywords" content="offline notes app, local-first note taking, IndexedDB, note attachments, offline sync" />
+  <meta name="author" content="Saksham Sachan" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta name="application-name" content="NoteFlow" />
+  <meta name="color-scheme" content="light" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="NoteFlow" />
+  <meta property="og:title" content="NoteFlow — Offline-First Notes App" />
+  <meta property="og:description" content="Write and organize notes offline. Your notes save on your device and sync when you reconnect." />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="NoteFlow — Offline-First Notes App" />
+  <meta name="twitter:description" content="Write and organize notes offline. Your notes save on your device and sync when you reconnect." />
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "NoteFlow",
+    "description": "Write and organize notes offline. Notes and attachments are saved on the device and can sync when connectivity returns.",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript",
+    "featureList": ["Offline note taking", "Note categories", "File attachments", "Conflict handling", "Synchronization"],
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" },
+    "author": { "@type": "Person", "name": "Saksham Sachan" }
+  }
+  </script>
+
+  <!-- ============ Tailwind (external) ============ -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {  
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: "#4f46e5", dark: "#4338ca", soft: "#eef2ff" },
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Small custom CSS: focus rings, motion, keyframes -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="min-h-screen text-slate-900 antialiased">
+
+  <!-- Skip link (keyboard users) -->
+  <a href="#notesHeading"
+     class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-white focus:shadow-lg">
+    Skip to your notes
+  </a>
+
+  <!-- ============ Top bar ============ -->
+  <header id="appHeader" class="app-header sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-2 sm:px-5">
+    <!-- Brand -->
+    <div class="flex items-center gap-3">
+      <span aria-hidden="true" class="grid h-10 w-10 place-items-center rounded-[11px] bg-gradient-to-br from-brand to-violet-600 text-white shadow-lg shadow-indigo-500/30">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+      </span>
+      <div>
+        <h1 class="block text-base font-bold leading-tight tracking-tight">NoteFlow</h1>
+        <span class="block text-[11px] text-slate-500">Offline-first notes</span>
+      </div>
+    </div>
+
+    <button id="simulateConflictBtn" type="button" title="Simulate a conflict on the current note"
+            class="inline-flex h-10 items-center gap-2 rounded-[10px] border border-amber-300 bg-amber-50 px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled>
+      <span aria-hidden="true">⚠</span> Simulate conflict
+    </button>
+
+    <!-- Search -->
+    <form id="searchForm" role="search" class="order-3 w-full sm:order-none sm:mx-2 sm:w-auto sm:max-w-md sm:flex-1">
+      <label for="searchInput" class="sr-only">Search notes</label>
+      <div class="flex h-10 items-center gap-2 rounded-[10px] border border-transparent bg-slate-100 px-3 focus-within:border-brand focus-within:bg-white focus-within:ring-2 focus-within:ring-brand/20">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input id="searchInput" type="search" placeholder="Search notes…" autocomplete="off"
+               class="w-full border-0 bg-transparent text-sm outline-none placeholder:text-slate-400" />
+      </div>
+    </form>
+
+    <!-- Controls -->
+    <div class="ml-auto flex flex-wrap items-center gap-2">
+      <!-- Connection status (announced to screen readers) -->
+      <span id="connPill" role="status" aria-live="polite"
+            class="inline-flex h-9 items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700">
+        <span aria-hidden="true" class="h-2 w-2 rounded-full bg-current"></span>
+        <span id="connText">Online</span>
+      </span>
+
+      <span id="pendingBadge" role="status" aria-live="polite" aria-atomic="true" class="inline-flex h-9 items-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-500">
+        0 pending
+      </span>
+
+      <button id="searchToggle" type="button" aria-label="Open search" aria-expanded="false" aria-controls="searchForm"
+              class="hidden"
+              title="Search notes">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+      </button>
+
+      <button id="syncBtn" type="button"
+              title="Sync pending changes to the NoteFlow server"
+              class="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none">
+        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+        Sync now
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ Main ============ -->
+  <main id="mainContent" class="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl grid-cols-1 px-4 py-6 pb-20 sm:px-5">
+
+    <section aria-labelledby="notesHeading" class="min-h-[calc(100vh-8rem)]">
+      <div class="mb-4 flex flex-wrap items-center gap-3">
+        <h2 id="notesHeading" class="text-lg font-bold tracking-tight text-slate-800">Your notes</h2>
+        <span id="noteCount" aria-label="Total notes: 0" class="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 shadow-sm ring-1 ring-slate-200">0</span>
+        <label for="categoryFilter" class="sr-only">Filter notes by category</label>
+        <select id="categoryFilter" class="h-9 max-w-[145px] rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 sm:max-w-none sm:px-3 sm:text-sm">
+          <option value="all">All categories</option>
+          <option>Daily</option>
+          <option>Plan</option>
+          <option>Study</option>
+          <option>Important</option>
+          <option>Work</option>
+          <option>Personal</option>
+          <option>Memories</option>
+        </select>
+        <button id="selectionModeBtn" type="button" aria-pressed="false"
+                class="ml-auto inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+          Select
+        </button>
+        <div id="selectionActions" role="group" aria-label="Bulk note actions" class="hidden w-full flex-wrap items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50/70 p-2">
+          <span id="selectionCount" class="mr-auto px-1 text-xs font-semibold text-indigo-900">0 selected</span>
+          <button id="selectAllBtn" type="button" class="h-9 rounded-lg border border-indigo-200 bg-white px-3 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Select all</button>
+          <button id="bulkPinBtn" type="button" class="h-9 rounded-lg border border-indigo-200 bg-white px-3 text-xs font-semibold text-indigo-700 hover:bg-indigo-50" disabled>Pin selected</button>
+          <button id="bulkDeleteBtn" type="button" class="h-9 rounded-lg bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300" disabled>Delete selected</button>
+        </div>
+      </div>
+      <p id="notesAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+      <ul id="list" role="list" aria-label="Your notes" aria-describedby="notesHeading" class="grid auto-rows-max grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"></ul>
+    </section>
+
+  </main>
+
+  <footer class="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-slate-200 px-4 py-5 pb-20 text-sm text-slate-500 sm:px-5">
+    <span class="font-medium text-slate-600">Made by Saksham Sachan</span>
+    <nav aria-label="Creator links" class="flex items-center gap-4">
+      <a href="https://www.linkedin.com/in/saksham-866a86423/" target="_blank" rel="noopener noreferrer"
+         class="rounded-sm underline decoration-slate-300 underline-offset-4 transition hover:text-brand focus-visible:text-brand">LinkedIn<span class="sr-only"> (opens in a new tab)</span></a>
+      <a href="https://github.com/sakshamsachan472-cyber" target="_blank" rel="noopener noreferrer"
+         class="rounded-sm underline decoration-slate-300 underline-offset-4 transition hover:text-brand focus-visible:text-brand">GitHub<span class="sr-only"> (opens in a new tab)</span></a>
+    </nav>
+  </footer>
+
+  <button id="addBtn" type="button" aria-label="Add note" title="Add note"
+          class="fixed bottom-16 right-6 z-40 grid h-14 w-14 place-items-center rounded-full bg-brand text-white shadow-xl shadow-indigo-500/30 transition hover:-translate-y-1 hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand sm:bottom-16 sm:right-8">
+    <svg aria-hidden="true" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <section id="editor" aria-labelledby="editorHeading" aria-modal="true" role="dialog"
+           aria-hidden="true" class="fixed inset-0 z-40 hidden flex flex-col overflow-y-auto bg-slate-50 p-4 sm:p-8">
+    <div class="mx-auto flex min-h-full w-full max-w-4xl flex-1 flex-col">
+      <div class="mb-4 flex flex-wrap items-center gap-2">
+        <button id="cancelBtn" type="button" aria-label="Back to notes without saving changes"
+                class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-100">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/><path d="M9 12h11"/></svg>
+          Back to notes
+        </button>
+        <h2 id="editorHeading" tabindex="-1" class="ml-2 text-base font-bold text-slate-800 focus:outline-none sm:text-lg">New note</h2>
+        <span class="ml-auto"></span>
+        <button id="editBtn" type="button"
+                class="hidden h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+          Edit note
+        </button>
+        <button id="simulateConflictEditorBtn" type="button"
+                class="hidden h-10 items-center rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-100">
+          <span aria-hidden="true">⚠</span> Simulate conflict
+        </button>
+        <button id="syncEditorBtn" type="button"
+                class="hidden h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">
+          Sync now
+        </button>
+        <button id="deleteBtn" type="button"
+                class="inline-flex h-10 items-center gap-2 rounded-xl border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition hover:bg-red-50">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+          <span id="deleteLabel">Discard draft</span>
+        </button>
+        <button id="saveBtn" type="button"
+                class="inline-flex h-10 items-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition hover:bg-brand-dark">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l4 4v14H3V3z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>
+          Save note
+        </button>
+      </div>
+
+      <div id="editorContent" class="app-panel flex flex-1 flex-col rounded-2xl border bg-white p-5 sm:p-8">
+        <div class="flex items-start gap-3 border-b border-slate-100 pb-4">
+          <label for="titleInput" class="sr-only">Note title</label>
+          <input id="titleInput" class="min-w-0 flex-1 border-0 bg-transparent text-2xl font-bold tracking-tight outline-none placeholder:text-slate-300 read-only:cursor-default sm:text-3xl" placeholder="Give your note a title" autocomplete="off" />
+          <button id="pinBtn" type="button" aria-pressed="false" aria-label="Pin this note"
+                  class="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z"/></svg>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 py-3">
+          <label for="categoryInput" class="text-xs font-semibold text-slate-500">Note type</label>
+          <select id="categoryInput" class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20">
+            <option>Daily</option>
+            <option>Plan</option>
+            <option>Study</option>
+            <option>Important</option>
+            <option>Work</option>
+            <option>Personal</option>
+            <option>Memories</option>
+          </select>
+        </div>
+
+        <label for="bodyInput" class="sr-only">Note content</label>
+        <textarea id="bodyInput" class="min-h-[320px] flex-1 resize-none border-0 bg-transparent pt-5 text-[15px] leading-relaxed text-slate-700 outline-none placeholder:text-slate-300 read-only:cursor-default sm:text-base" placeholder="Start writing your thoughts..."></textarea>
+
+        <div class="mt-3">
+          <button id="formulaKeyboardToggle" type="button" aria-expanded="false" aria-controls="formulaKeyboard"
+                  class="inline-flex h-9 items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h.01M12 8h.01M17 8h.01M7 12h.01M12 12h.01M17 12h.01M8 16h8"/></svg>
+            Open keyboard
+          </button>
+          <div id="formulaKeyboard" class="mt-3 hidden rounded-xl border border-indigo-100 bg-indigo-50/60 p-3" aria-label="Math and chemistry symbols">
+            <div class="mb-3 flex flex-wrap gap-2" role="tablist" aria-label="Keyboard type">
+              <button id="mathKeyboardTab" type="button" role="tab" aria-selected="true" aria-controls="mathKeyboardPanel"
+                      class="h-9 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white">Math</button>
+              <button id="chemistryKeyboardTab" type="button" role="tab" aria-selected="false" aria-controls="chemistryKeyboardPanel"
+                      class="h-9 rounded-lg border border-indigo-200 bg-white px-3 text-xs font-semibold text-indigo-700">Chemistry</button>
+              <button id="simpleKeyboardTab" type="button" role="tab" aria-selected="false" aria-controls="simpleKeyboardPanel"
+                      class="h-9 rounded-lg border border-indigo-200 bg-white px-3 text-xs font-semibold text-indigo-700">Simple Keyboard</button>
+            </div>
+            <div id="mathKeyboardPanel" role="tabpanel" aria-labelledby="mathKeyboardTab">
+              <div id="mathKeys" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div id="chemistryKeyboardPanel" class="hidden" role="tabpanel" aria-labelledby="chemistryKeyboardTab">
+              <div id="chemistryKeys" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div id="simpleKeyboardPanel" class="hidden" role="tabpanel" aria-labelledby="simpleKeyboardTab">
+              <div id="simpleKeys" class="flex flex-col gap-2"></div>
+            </div>
+            <p id="keyboardHint" class="mt-3 text-[11px] text-slate-500">Choose a math symbol to insert it at your cursor in the note.</p>
+          </div>
+        </div>
+
+        <div class="mt-4 border-t border-slate-100 pt-4">
+          <div class="mb-3 flex flex-wrap items-center gap-3">
+            <button id="addAttachmentBtn" type="button" aria-describedby="attachmentHelp"
+                    class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.4 11.6-8.5 8.5a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+              Add image or file
+            </button>
+            <input id="attachmentInput" type="file" multiple class="hidden" aria-label="Choose images or files to attach" />
+            <span id="attachmentHelp" class="text-xs text-slate-500">Up to 1 MB of attachments per note</span>
+          </div>
+          <div id="attachmentList" class="flex flex-wrap gap-3" role="list" aria-label="Note attachments"></div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500">
+          <span id="saveState" class="inline-flex items-center gap-2 font-semibold">
+            <span aria-hidden="true" class="h-[7px] w-[7px] rounded-full bg-emerald-500"></span>
+            <span id="saveText">Draft not saved yet</span>
+          </span>
+          <span class="ml-auto" id="wordCount">0 words</span>
+          <span id="lastSync" role="status"></span>
+        </div>
+        <div id="conflictArea"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="deleteConfirm" role="alertdialog" aria-modal="true" aria-labelledby="deleteConfirmTitle"
+           aria-describedby="deleteConfirmDescription" aria-hidden="true"
+           class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+      <span class="grid h-11 w-11 place-items-center rounded-xl bg-red-50 text-red-600">
+        <svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+      </span>
+      <h2 id="deleteConfirmTitle" class="mt-4 text-lg font-bold tracking-tight text-slate-900">Delete this note?</h2>
+      <p id="deleteConfirmDescription" class="mt-2 text-sm leading-6 text-slate-500">This note will be permanently removed from this device.</p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button id="cancelDeleteBtn" type="button"
+                class="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
+          Cancel
+        </button>
+        <button id="confirmDeleteBtn" type="button"
+                class="h-10 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700">
+          Delete
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section id="imageViewer" role="dialog" aria-modal="true" aria-labelledby="imageViewerName" aria-hidden="true"
+           class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+    <div class="image-viewer-content relative max-h-[90vh] max-w-[92vw] rounded-2xl border border-white/20 bg-slate-900/90 p-2 shadow-2xl sm:max-h-[88vh] sm:max-w-[90vw] sm:p-3">
+      <button id="closeImageViewerBtn" type="button" aria-label="Close image preview"
+              class="absolute -right-3 -top-3 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/30 bg-white text-slate-800 shadow-lg transition hover:scale-105 hover:bg-slate-100 focus-visible:outline-white">
+        <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg>
+      </button>
+      <img id="imageViewerImage" alt="" class="block h-[min(80vh,800px)] w-[min(88vw,1100px)] rounded-xl object-contain" />
+      <p id="imageViewerName" class="px-2 pt-2 text-center text-xs text-white/80"></p>
+    </div>
+  </section>
+
+  <!-- ============ Status bar ============ -->
+  <div id="statusBar" role="region" aria-label="Connection and sync status" class="fixed inset-x-0 bottom-0 z-30 flex h-12 flex-wrap items-center gap-4 bg-slate-900 px-4 text-xs text-slate-300 sm:px-5">
+    <span class="inline-flex items-center gap-2">
+      <span aria-hidden="true" id="sbDot" class="h-[7px] w-[7px] rounded-full bg-emerald-500"></span>
+      <span id="sbConn">Online</span>
+    </span>
+    <span class="hidden items-center gap-2 sm:inline-flex">
+      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span id="sbSync">Not synced yet</span>
+    </span>
+    <span class="hidden sm:inline" id="sbQueued">0 queued</span>
+    <span id="ticker" role="status" aria-live="polite" class="ml-auto min-w-0 flex-1 overflow-hidden text-right text-slate-400">
+      <span class="text-slate-400">Ready — notes save on this device</span>
+    </span>
+  </div>
+
+  <!-- ============ Coverage strip ============ -->
+  <!-- Toast -->
+  <div id="toast" role="status" aria-live="polite"
+       class="pointer-events-none fixed bottom-16 left-1/2 z-50 -translate-x-1/2 translate-y-[150%] rounded-[10px] bg-slate-900 px-5 py-3 text-sm font-medium text-white shadow-2xl transition-transform duration-300">
+    <span id="toastMsg">Synced</span>
+  </div>
+
+  <!-- Screen-reader live region for announcements -->
+  <div id="srAnnounce" class="sr-only" aria-live="polite"></div>
+
+  <noscript>
+    <p class="mx-auto max-w-6xl px-5 py-6 text-sm text-slate-600">
+      NoteFlow needs JavaScript to save and sync notes. Please enable JavaScript to use the app.
+    </p>
+  </noscript>
+
+<script src="noteflow.js" defer></script>
+</body>
+</html>
