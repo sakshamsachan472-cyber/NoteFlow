@@ -1,0 +1,249 @@
+:focus-visible {
+  outline: 3px solid #3730a3;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
+
+body {
+  background: #f6f7fb;
+}
+
+body.editor-open {
+  overflow: hidden;
+}
+
+.app-header.sticky {
+  background: linear-gradient(110deg, #ffffff 0%, #fcfdff 55%, #ffffff 100%);
+  backdrop-filter: blur(16px);
+  border-bottom-color: #edf0f6;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, .035);
+}
+
+.app-panel {
+  border-color: #e6eaf2;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .055), 0 2px 6px rgba(15, 23, 42, .025);
+}
+
+#notesHeading {
+  color: #172033;
+  font-size: 1.25rem;
+}
+
+#list > li {
+  overflow: hidden;
+  border-color: #e5e9f1;
+  border-radius: 15px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, .035);
+}
+
+#list > li:hover {
+  border-color: #d7dcf5;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .075);
+}
+
+#list > li > button:first-child {
+  min-height: 116px;
+}
+
+@keyframes imageViewerIn {
+  from { opacity: 0; transform: translateY(12px) scale(.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.image-viewer-content {
+  animation: imageViewerIn .2s ease-out;
+}
+
+.workspace-kicker {
+  letter-spacing: .16em;
+}
+
+#editor {
+  min-height: 500px;
+}
+
+#bodyInput {
+  line-height: 1.85;
+}
+
+#list {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    column-gap: 8px;
+    row-gap: 10px;
+    padding: 10px 14px;
+  }
+
+  .app-header > div:first-child {
+    flex: 1 1 auto;
+  }
+
+  .app-header > div:last-child {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: 0;
+  }
+
+  .app-header [role="search"] {
+    display: none;
+  }
+
+  .app-header.search-open [role="search"] {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    right: 12px;
+    left: 12px;
+    display: block;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 8px;
+    border: 1px solid #e7eaf1;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .14);
+  }
+
+  #searchToggle {
+    display: inline-grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    place-items: center;
+    border-radius: 10px;
+    color: #475569;
+  }
+
+  #searchToggle:hover {
+    background: #eef2ff;
+    color: #4f46e5;
+  }
+
+  #syncBtn {
+    margin-left: auto;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 12px;
+  }
+
+  main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  #list > li > button:first-child {
+    padding-right: 8rem;
+  }
+
+  #list > li > span > button {
+    width: 40px;
+    height: 40px;
+  }
+
+  #editor {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  #editor > div > div:first-child {
+    position: sticky;
+    top: -12px;
+    z-index: 10;
+    margin: -4px -4px 12px;
+    padding: 4px;
+    background: rgba(248, 250, 252, .96);
+    backdrop-filter: blur(12px);
+  }
+
+  #editor > div > div:first-child > button {
+    min-height: 44px;
+  }
+
+  #editorContent {
+    padding: 16px;
+  }
+
+  #bodyInput {
+    min-height: 260px;
+    font-size: 16px;
+  }
+
+  body.editor-open #toast {
+    display: none;
+  }
+
+  #lastSync {
+    display: none;
+  }
+
+  #statusBar {
+    height: calc(44px + env(safe-area-inset-bottom));
+    gap: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #ticker {
+    display: none;
+  }
+
+  #addBtn {
+    right: 16px;
+    bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes pulseRing {
+  0%, 100% {
+    box-shadow: 0 6px 16px rgba(79, 70, 229, .28), 0 0 0 0 rgba(79, 70, 229, .4);
+  }
+
+  50% {
+    box-shadow: 0 6px 16px rgba(79, 70, 229, .28), 0 0 0 10px rgba(79, 70, 229, 0);
+  }
+}
+
+.pulse {
+  animation: pulseRing 1.2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+.blink {
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes slidein {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.slidein {
+  animation: slidein .25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
